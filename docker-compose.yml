@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  data_warehouse:
+    image: postgres:15
+    container_name: weather_postgres
+    environment:
+      - POSTGRES_USER=talha_admin
+      - POSTGRES_PASSWORD=engineer_pass
+      - POSTGRES_DB=weather_flights
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
