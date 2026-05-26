@@ -1,16 +1,57 @@
 import requests
 import time
-from sqlalchemy import create_engine, text
+import os
+from sqlalchemy import create_engine, text, inspect
 
-# 1. THE ADDRESS: Telling Python where our Warehouse is
-# Structure: postgresql://username:password@location:port/database_name
-DATABASE_URL = "postgresql://talha_admin:engineer_pass@localhost:5432/weather_flights"
+# --- CONFIGURATION ---
+# This is the "Settings" section of our worker
+TARGET_CITY = "London"
+SLEEP_TIME = 60 # Seconds between updates
 
-# 2. THE PIPE: Creating a connection "engine"
+# THE ADDRESS: We check the system for a label named 'DB_HOST'.
+# 1. If we find it (Inside Docker), we use that value (postgres_warehouse).
+# 2. If we don't (On your Laptop), we default to '127.0.0.1'.
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DATABASE_URL = f"postgresql://data_engineer:password123@{DB_HOST}:5432/weather_data"
+
+# THE PIPE: Creating a connection "engine"
 engine = create_engine(DATABASE_URL)
 
+def ensure_table_exists():
+    """
+    IDEMPOTENCY CHECK:
+    This function checks the database to see if our 'filling cabinet' (table) 
+    exists. If it's missing, it builds it. This allows us to restart the 
+    script safely without crashing.
+    """
+    print("--- Checking for raw_weather_data table ---")
+    with engine.connect() as connection:
+        inspector = inspect(connection)
+        if not inspector.has_table("raw_weather_data"):
+            print("Table raw_weather_data not found. Creating it...")
+            create_table_query = text("""
+                CREATE TABLE raw_weather_data (
+                    id SERIAL PRIMARY KEY,
+                    city_name VARCHAR(255) NOT NULL,
+                    temperature FLOAT NOT NULL,
+                    humidity INTEGER NOT NULL,
+                    weather_description VARCHAR(255) NOT NULL,
+                    ingestion_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            connection.execute(create_table_query)
+            connection.commit()
+            print("Table raw_weather_data created successfully.")
+        else:
+            print("Table raw_weather_data already exists.")
+
 def get_weather_data(city):
-    """Goes to the internet and grabs raw weather data."""
+    """
+    EXTRACTION:
+    Connects to the wttr.in API, fetches raw JSON data, and 
+    transforms it into a clean Python dictionary containing 
+    only the temperature, humidity, and description.
+    """
     print(f"--- Step 1: Fetching weather for {city} ---")
     
     # We use a free 'mock' weather API that returns JSON (computer-readable text)
@@ -46,22 +87,22 @@ def load_to_database(weather_info):
         connection.execute(query, weather_info)
         connection.commit() # This 'locks' the data into the shelf
     
-    print("Success! Data is now in the database.")
+    print(f"Success! {weather_info['city']} weather recorded at {weather_info['temp']}°C.")
 
 # --- THE EXECUTION ---
 # This is where the worker actually starts their shift
 if __name__ == "__main__":
     print("Starting the Continuous Ingestion Worker... (Press Ctrl+C to stop)")
+    ensure_table_exists() # Ensure table exists before starting ingestion
     
     while True:
         try:
-            my_report = get_weather_data("London")
+            my_report = get_weather_data(TARGET_CITY)
             load_to_database(my_report)
             
-            print("Worker taking a nap for 60 seconds...")
-            time.sleep(60) # Wait for 1 minute
+            print(f"Worker taking a nap for {SLEEP_TIME} seconds...")
+            time.sleep(SLEEP_TIME) 
             
         except Exception as e:
             print(f"Oops! The truck crashed: {e}")
             time.sleep(10) # Wait a bit before trying again
-
