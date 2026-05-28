@@ -1,0 +1,24 @@
+name: Code Quality Check
+
+# 1. When should the robot wake up?
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# 2. What should the robot do?
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Build Worker Image
+      run: docker build -t weather_worker:latest .
+
+    - name: Test Environment
+      run: |
+        echo "The factory blueprint was successfully built by the robot!"

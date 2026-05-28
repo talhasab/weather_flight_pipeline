@@ -56,7 +56,7 @@ def get_weather_data(city):
     
     # We use a free 'mock' weather API that returns JSON (computer-readable text)
     url = f"https://wttr.in/{city}?format=j1"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     
     # Convert the long web response into a Python 'Dictionary' (a labeled list)
     data = response.json()

@@ -34,6 +34,16 @@ I am a complete novice to computer science and IT technologies. Do not assume I 
 - **Decision:** Initialize a local Git repository and track the project files.
 - **Action:** Cleaned up redundant/messy SQL files to ensure a professional repository structure.
 
+### ADR 009: Remote Repository Integration
+- **Goal:** Establish a centralized source of truth.
+- **Decision:** Connect the local repository to GitHub.
+- **Rationale:** Prerequisite for CI/CD and cloud deployment phases.
+
+### ADR 010: CI/CD Pipeline Configuration
+- **Goal:** Automate code testing via GitHub Actions.
+- **Decision:** Store workflow YAML files exclusively in `.github/workflows/`.
+- **Rationale:** This is the industry standard location required by GitHub; keeping files in the root creates redundancy and confusion.
+
 ---
 
 ## The 8-Week Curriculum Outline
